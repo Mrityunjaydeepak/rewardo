@@ -5,31 +5,38 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 const BROWSERLESS_TOKEN = '2SR99EoARKDVmFOc5b5e32df6355fc31353ef8845a37414a4';
 
-// Your Rewardoo tracking URL (replace if needed)
+// Your Rewardoo tracking URL
 const TRACKING_URL = 'https://admin.rewardoo.com/track/9b235NBDbO7usq_b4Lx2UdgKkLV6jGm88d36ZvJ0M268Z1JhVAohdYDm_bvqTMZMdoGmQKrDP3vbAc?source=inner&url=https%3A%2F%2Fwww.intersport.de%2F';
 
 app.get('/go', async (req, res) => {
   try {
-    // Call Browserless to open the tracking URL and wait for redirects
-    const browserlessUrl = `https://chrome.browserless.io/content?token=${BROWSERLESS_TOKEN}&url=${encodeURIComponent(TRACKING_URL)}`;
+    const browserlessUrl = `https://chrome.browserless.io/function?token=${BROWSERLESS_TOKEN}`;
 
-    const result = await axios.get(browserlessUrl, {
-      maxRedirects: 0, // We want to capture where it lands
-      validateStatus: status => status >= 200 && status < 400,
+    const script = `
+      async ({ page, context }) => {
+        await page.goto("${TRACKING_URL}", { waitUntil: "networkidle2", timeout: 15000 });
+        await page.waitForTimeout(3000);
+        return page.url();
+      }
+    `;
+
+    const result = await axios.post(browserlessUrl, { code: script }, {
+      headers: { 'Content-Type': 'application/json' },
+      timeout: 20000
     });
 
-    const finalUrl = result.request.res.responseUrl;
+    const finalUrl = result.data;
 
     if (finalUrl && finalUrl.includes('intersport.de')) {
       console.log('✅ Final redirect URL:', finalUrl);
       return res.redirect(302, finalUrl);
     } else {
-      console.warn('⚠️ Could not resolve a valid Intersport URL. Redirecting to fallback.');
+      console.warn('⚠️ Invalid or unexpected final URL:', finalUrl);
       return res.redirect(302, 'https://www.intersport.de/');
     }
 
   } catch (err) {
-    console.error('❌ Error resolving final URL via Browserless:', err.message);
+    console.error('❌ Browserless function error:', err.response?.data || err.message);
     return res.status(500).send('Failed to resolve final redirect.');
   }
 });
