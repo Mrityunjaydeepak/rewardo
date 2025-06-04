@@ -1,44 +1,47 @@
 const express = require('express');
-const puppeteer = require('puppeteer-core');
-const { execSync } = require('child_process');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-const TRACKING_URL = 'https://admin.rewardoo.com/track/9b235NBDbO7usq_b4Lx2UdgKkLV6jGm88d36ZvJ0M268Z1JhVAohdYDm_bvqTMZMdoGmQKrDP3vbAc?source=inner&url=https%3A%2F%2Fwww.intersport.de%2F';
+// Serve a JS page that loads the tracking URL and redirects
+app.get('/go', (req, res) => {
+  const trackingUrl = 'https://admin.rewardoo.com/track/9b235NBDbO7usq_b4Lx2UdgKkLV6jGm88d36ZvJ0M268Z1JhVAohdYDm_bvqTMZMdoGmQKrDP3vbAc?source=inner&url=https%3A%2F%2Fwww.intersport.de%2F';
 
-app.get('/go', async (req, res) => {
-  let browser;
+  const html = `
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <title>Redirecting...</title>
+        <meta name="robots" content="noindex, nofollow" />
+        <style>
+          body { font-family: sans-serif; text-align: center; padding-top: 50px; }
+        </style>
+      </head>
+      <body>
+        <p>Hold tight! Taking you to the best Intersport deals...</p>
+        <iframe src="${trackingUrl}" style="display:none;" sandbox></iframe>
+        <script>
+          setTimeout(function() {
+            // This is the base final destination (we know it's always Intersport)
+            const baseUrl = "https://www.intersport.de/";
 
-  try {
-  const chromePath = '/usr/bin/google-chrome';
+            // Optionally pass UTM manually if needed (or use static from tracking)
+            const params = new URLSearchParams(window.location.search);
+            const iclid = params.get("iclid"); // e.g., if passed from another ad
 
+            const finalUrl = new URL(baseUrl);
+            if (iclid) finalUrl.searchParams.set("iclid", iclid);
 
+            // Redirect
+            window.location.href = finalUrl.toString();
+          }, 2500);
+        </script>
+      </body>
+    </html>
+  `;
 
-    browser = await puppeteer.launch({
-      executablePath: chromePath,
-      headless: true,
-      args: ['--no-sandbox', '--disable-setuid-sandbox']
-    });
-
-    const page = await browser.newPage();
-    await page.setUserAgent(req.headers['user-agent'] || 'Mozilla/5.0');
-    await page.goto(TRACKING_URL, { waitUntil: 'networkidle2', timeout: 15000 });
-
-    await new Promise(resolve => setTimeout(resolve, 3000));
-
-    const finalUrl = page.url();
-    console.log('✅ Final Resolved URL:', finalUrl);
-
-    return res.redirect(302, finalUrl);
-
-  } catch (err) {
-    console.error('❌ Error resolving final URL:', err.message);
-    return res.status(500).send('Error resolving final redirect.');
-  } finally {
-    if (browser) await browser.close();
-  }
+  res.send(html);
 });
 
 app.listen(PORT, () => {
-  console.log(`🚀 Server running at http://localhost:${PORT}/go`);
+  console.log(`🚀 Server running on http://localhost:${PORT}/go`);
 });
