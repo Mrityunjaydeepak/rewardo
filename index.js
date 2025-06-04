@@ -10,14 +10,14 @@ app.get('/go', (req, res) => {
     <!DOCTYPE html>
     <html>
       <head>
-        <title>Redirecting...</title>
+       
         <meta name="robots" content="noindex, nofollow" />
         <style>
           body { font-family: sans-serif; text-align: center; padding-top: 50px; }
         </style>
       </head>
       <body>
-        <p>Hold tight! Taking you to the best Intersport deals...</p>
+      
         <iframe src="${trackingUrl}" style="display:none;" sandbox></iframe>
         <script>
           setTimeout(function() {
