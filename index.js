@@ -5,22 +5,22 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 const BROWSERLESS_TOKEN = '2SR99EoARKDVmFOc5b5e32df6355fc31353ef8845a37414a4';
 
-// Your Rewardoo tracking URL
 const TRACKING_URL = 'https://admin.rewardoo.com/track/9b235NBDbO7usq_b4Lx2UdgKkLV6jGm88d36ZvJ0M268Z1JhVAohdYDm_bvqTMZMdoGmQKrDP3vbAc?source=inner&url=https%3A%2F%2Fwww.intersport.de%2F';
 
 app.get('/go', async (req, res) => {
   try {
     const browserlessUrl = `https://production-sfo.browserless.io/function?token=${BROWSERLESS_TOKEN}`;
 
-    const script = `
-      async ({ page, context }) => {
+    // ✅ Properly formatted as a full stringified async function
+    const payload = {
+      code: `(async ({ page }) => {
         await page.goto("${TRACKING_URL}", { waitUntil: "networkidle2", timeout: 15000 });
         await page.waitForTimeout(3000);
         return page.url();
-      }
-    `;
+      })`
+    };
 
-    const result = await axios.post(browserlessUrl, { code: script }, {
+    const result = await axios.post(browserlessUrl, payload, {
       headers: { 'Content-Type': 'application/json' },
       timeout: 20000
     });
