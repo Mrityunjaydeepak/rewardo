@@ -10,7 +10,7 @@ const TRACKING_URL = 'https://admin.rewardoo.com/track/9b235NBDbO7usq_b4Lx2UdgKk
 
 app.get('/go', async (req, res) => {
   try {
-    const browserlessUrl = `https://chrome.browserless.io/function?token=${BROWSERLESS_TOKEN}`;
+    const browserlessUrl = `https://production-sfo.browserless.io/function?token=${BROWSERLESS_TOKEN}`;
 
     const script = `
       async ({ page, context }) => {
@@ -31,7 +31,7 @@ app.get('/go', async (req, res) => {
       console.log('✅ Final redirect URL:', finalUrl);
       return res.redirect(302, finalUrl);
     } else {
-      console.warn('⚠️ Invalid or unexpected final URL:', finalUrl);
+      console.warn('⚠️ Unexpected or empty final URL:', finalUrl);
       return res.redirect(302, 'https://www.intersport.de/');
     }
 
