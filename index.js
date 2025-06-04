@@ -10,7 +10,8 @@ app.get('/go', async (req, res) => {
   let browser;
 
   try {
-   const chromePath = '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
+  const chromePath = '/usr/bin/google-chrome';
+
 
 
     browser = await puppeteer.launch({
