@@ -1,47 +1,39 @@
 const express = require('express');
+const axios = require('axios');
 const app = express();
+
 const PORT = process.env.PORT || 3000;
+const BROWSERLESS_TOKEN = '2SR99EoARKDVmFOc5b5e32df6355fc31353ef8845a37414a4';
 
-// Serve a JS page that loads the tracking URL and redirects
-app.get('/go', (req, res) => {
-  const trackingUrl = 'https://admin.rewardoo.com/track/9b235NBDbO7usq_b4Lx2UdgKkLV6jGm88d36ZvJ0M268Z1JhVAohdYDm_bvqTMZMdoGmQKrDP3vbAc?source=inner&url=https%3A%2F%2Fwww.intersport.de%2F';
+// Your Rewardoo tracking URL (replace if needed)
+const TRACKING_URL = 'https://admin.rewardoo.com/track/9b235NBDbO7usq_b4Lx2UdgKkLV6jGm88d36ZvJ0M268Z1JhVAohdYDm_bvqTMZMdoGmQKrDP3vbAc?source=inner&url=https%3A%2F%2Fwww.intersport.de%2F';
 
-  const html = `
-    <!DOCTYPE html>
-    <html>
-      <head>
-       
-        <meta name="robots" content="noindex, nofollow" />
-        <style>
-          body { font-family: sans-serif; text-align: center; padding-top: 50px; }
-        </style>
-      </head>
-      <body>
-      
-        <iframe src="${trackingUrl}" style="display:none;" sandbox></iframe>
-        <script>
-          setTimeout(function() {
-            // This is the base final destination (we know it's always Intersport)
-            const baseUrl = "https://www.intersport.de/";
+app.get('/go', async (req, res) => {
+  try {
+    // Call Browserless to open the tracking URL and wait for redirects
+    const browserlessUrl = `https://chrome.browserless.io/content?token=${BROWSERLESS_TOKEN}&url=${encodeURIComponent(TRACKING_URL)}`;
 
-            // Optionally pass UTM manually if needed (or use static from tracking)
-            const params = new URLSearchParams(window.location.search);
-            const iclid = params.get("iclid"); // e.g., if passed from another ad
+    const result = await axios.get(browserlessUrl, {
+      maxRedirects: 0, // We want to capture where it lands
+      validateStatus: status => status >= 200 && status < 400,
+    });
 
-            const finalUrl = new URL(baseUrl);
-            if (iclid) finalUrl.searchParams.set("iclid", iclid);
+    const finalUrl = result.request.res.responseUrl;
 
-            // Redirect
-            window.location.href = finalUrl.toString();
-          }, 2500);
-        </script>
-      </body>
-    </html>
-  `;
+    if (finalUrl && finalUrl.includes('intersport.de')) {
+      console.log('✅ Final redirect URL:', finalUrl);
+      return res.redirect(302, finalUrl);
+    } else {
+      console.warn('⚠️ Could not resolve a valid Intersport URL. Redirecting to fallback.');
+      return res.redirect(302, 'https://www.intersport.de/');
+    }
 
-  res.send(html);
+  } catch (err) {
+    console.error('❌ Error resolving final URL via Browserless:', err.message);
+    return res.status(500).send('Failed to resolve final redirect.');
+  }
 });
 
 app.listen(PORT, () => {
-  console.log(`🚀 Server running on http://localhost:${PORT}/go`);
+  console.log(`🚀 Server running at http://localhost:${PORT}/go`);
 });
